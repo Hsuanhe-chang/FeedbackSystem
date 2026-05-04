@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 整合測試核心：提供 WebApplicationFactory / TestServer（啟動真實 ASP.NET Core 應用） -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.*" />
+
+    <!-- xUnit 測試框架 -->
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+
+    <!-- DB 存取：版本需與主專案一致（主專案使用 7.0.1），用於直接呼叫 SP 或 Teardown 清理資料 -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.*" />
+
+    <!-- 組態讀取：從 appsettings.json 取得連線字串 -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.*" />
+
+    <!-- Assert 可讀性提升：result.Should().Be(expected) 語法 -->
+    <PackageReference Include="FluentAssertions" Version="6.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- 參考主專案，才能使用 Controller / Service / ViewModel / Repository -->
+  <ItemGroup>
+    <ProjectReference Include="..\FeedbackSystem.csproj" />
+  </ItemGroup>
+
+  <!-- 將主專案的 appsettings.json 複製到測試輸出目錄，以讀取真實連線字串 -->
+  <ItemGroup>
+    <Content Include="..\appsettings.json"
+             CopyToOutputDirectory="PreserveNewest"
+             Link="appsettings.json" />
+  </ItemGroup>
+
+</Project>

@@ -269,9 +269,18 @@ public class FeedbackController : Controller
     /// 驗證通過後呼叫 Service 新增回覆（SP 內部同步快取欄位與狀態）
     /// 完成後 Redirect 回詳情頁
     /// </summary>
-    /// <param name="model">新增回覆表單 ViewModel（由 Detail 頁底部表單送出）</param>
+    /// <param name="model">
+    ///   新增回覆表單 ViewModel。
+    ///   使用 [Bind(Prefix = "NewReply")] 的原因：
+    ///   Detail.cshtml 的表單 model 是 FeedbackDetailViewModel，
+    ///   asp-for="NewReply.X" 會產生名稱帶有「NewReply.」前綴的表單欄位
+    ///   （例如 NewReply.Content、NewReply.FeedbackId），
+    ///   因此必須指定 Prefix = "NewReply" 才能正確將表單資料綁定至此 ViewModel。
+    ///   同時，ModelState 錯誤鍵值也會帶 "NewReply." 前綴，
+    ///   與 Detail.cshtml 中 asp-validation-for="NewReply.X" 相符。
+    /// </param>
     [HttpPost]
-    public async Task<IActionResult> AddReply(FeedbackReplyCreateViewModel model)
+    public async Task<IActionResult> AddReply([Bind(Prefix = "NewReply")] FeedbackReplyCreateViewModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -283,6 +292,8 @@ public class FeedbackController : Controller
             var replies = await _feedbackService.GetRepliesByFeedbackIdAsync(model.FeedbackId);
             detail.Replies  = replies.ToList();
             detail.NewReply = model; // 保留使用者已輸入的內容
+
+            // 重新帶入回覆類型下拉清單（POST 失敗後重新顯示表單需用到）
             ViewBag.ReplyTypeList = ReplyTypeSelectList;
 
             return View("Detail", detail);

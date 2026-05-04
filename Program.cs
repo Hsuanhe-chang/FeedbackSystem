@@ -1,3 +1,4 @@
+using FeedbackSystem.Repositories;
 using FeedbackSystem.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,8 +12,10 @@ builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
 });
 
-// 以 Scoped 生命週期註冊 IFeedbackService 介面與其實作 FeedbackService
-// 每個 HTTP Request 共用同一個實例，結束後自動釋放
+// 以 Scoped 生命週期分別註冊 Repository 與 Service
+// Repository：封裝所有 SP 呼叫（ADO.NET 實作）
+// Service：負責商業邏輯，依賴 IFeedbackRepository
+builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
 var app = builder.Build();
@@ -39,3 +42,8 @@ app.MapControllerRoute(
 
 
 app.Run();
+
+// 讓整合測試專案的 WebApplicationFactory<Program> 可存取此應用程式入口點。
+// top-level statement 編譯後為 internal class，需宣告 partial 使其對外可見。
+// 此宣告不影響正式環境的任何行為。
+public partial class Program { }

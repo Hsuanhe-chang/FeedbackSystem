@@ -10,4 +10,20 @@
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
   </ItemGroup>
 
+  <!-- 排除測試專案子目錄，避免主專案誤將測試檔案編譯進來 -->
+  <ItemGroup>
+    <Compile Remove="FeedbackSystem.Tests/**" />
+    <Content Remove="FeedbackSystem.Tests/**" />
+    <EmbeddedResource Remove="FeedbackSystem.Tests/**" />
+    <None Remove="FeedbackSystem.Tests/**" />
+  </ItemGroup>
+
+  <!-- 排除整合測試專案子目錄，避免主專案誤將整合測試檔案編譯進來 -->
+  <ItemGroup>
+    <Compile Remove="FeedbackSystem.IntegrationTests/**" />
+    <Content Remove="FeedbackSystem.IntegrationTests/**" />
+    <EmbeddedResource Remove="FeedbackSystem.IntegrationTests/**" />
+    <None Remove="FeedbackSystem.IntegrationTests/**" />
+  </ItemGroup>
+
 </Project>
