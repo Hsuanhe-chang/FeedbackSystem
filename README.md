@@ -1,0 +1,2 @@
+# FeedbackSystem
+POC使用github copilot創建系統以及測試程式碼，確認可行性和BUG產生程度
