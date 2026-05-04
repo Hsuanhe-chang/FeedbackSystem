@@ -1,0 +1,233 @@
+@model FeedbackSystem.Models.ViewModels.FeedbackDetailViewModel
+
+@{
+    ViewData["Title"] = "意見詳情";
+
+    // 輔助函式：Status 轉換為中文 + badge class
+    string GetStatusBadge(byte status) => status switch
+    {
+        0 => "bg-secondary", 1 => "bg-primary",
+        2 => "bg-success",   3 => "bg-dark",
+        _ => "bg-secondary"
+    };
+    string GetStatusText(byte status) => status switch
+    {
+        0 => "待處理", 1 => "處理中", 2 => "已回覆", 3 => "已關閉", _ => "未知"
+    };
+
+    // 輔助函式：Priority 轉換為中文 + badge class
+    string GetPriorityBadge(byte priority) => priority switch
+    {
+        1 => "bg-secondary", 2 => "bg-warning text-dark", 3 => "bg-danger", _ => "bg-secondary"
+    };
+    string GetPriorityText(byte priority) => priority switch
+    {
+        1 => "一般", 2 => "重要", 3 => "緊急", _ => "未知"
+    };
+}
+
+@* ── 頁面標題列 ── *@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>意見詳情</h2>
+    <div class="d-flex gap-2">
+        <a asp-controller="Feedback" asp-action="Edit"
+           asp-route-id="@Model.FeedbackId"
+           class="btn btn-outline-warning">編輯此意見</a>
+        <a asp-controller="Feedback" asp-action="Index"
+           class="btn btn-outline-secondary">返回列表</a>
+    </div>
+</div>
+
+@* ════════════════════════════════════════════
+   上半部：意見主體資訊
+   ════════════════════════════════════════════ *@
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>意見資訊</strong>
+        <div>
+            @* 狀態 badge *@
+            <span class="badge @GetStatusBadge(Model.Status) me-1">
+                @GetStatusText(Model.Status)
+            </span>
+            @* 優先等級 badge *@
+            <span class="badge @GetPriorityBadge(Model.Priority)">
+                @GetPriorityText(Model.Priority)
+            </span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <strong>追蹤代碼</strong>
+                <p><code>@Model.TrackingCode</code></p>
+            </div>
+            <div class="col-md-4">
+                <strong>建立時間</strong>
+                <p>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</p>
+            </div>
+            <div class="col-md-4">
+                <strong>最後更新</strong>
+                <p>@Model.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss")</p>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <strong>客戶姓名</strong>
+                <p>@Model.CustomerName</p>
+            </div>
+            <div class="col-md-4">
+                <strong>電子信箱</strong>
+                @* 使用 HtmlEncode 輸出，防止 XSS *@
+                <p>@Model.CustomerEmail</p>
+            </div>
+            <div class="col-md-4">
+                <strong>聯絡電話</strong>
+                <p>@(string.IsNullOrEmpty(Model.CustomerPhone) ? "（未提供）" : Model.CustomerPhone)</p>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <strong>意見類別</strong>
+                <p>@Model.Category</p>
+            </div>
+            <div class="col-md-8">
+                <strong>意見主旨</strong>
+                <p>@Model.Subject</p>
+            </div>
+        </div>
+        <div class="mb-3">
+            <strong>意見內容</strong>
+            @* pre-wrap 保留換行，防止 XSS 已由 Razor 預設 HTML Encode 處理 *@
+            <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">@Model.Content</div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <strong>回覆總數</strong>
+                <p>@Model.ReplyCount 筆</p>
+            </div>
+            @if (Model.LatestReplyAt.HasValue)
+            {
+                <div class="col-md-4">
+                    <strong>最新回覆時間</strong>
+                    <p>@Model.LatestReplyAt.Value.ToString("yyyy-MM-dd HH:mm")</p>
+                </div>
+            }
+        </div>
+
+        @* ── 管理員備註（後台可見，不對客戶公開） ── *@
+        @if (!string.IsNullOrEmpty(Model.AdminNote))
+        {
+            <div class="alert alert-info mb-0">
+                <strong>管理員備註：</strong>
+                <span style="white-space: pre-wrap;">@Model.AdminNote</span>
+            </div>
+        }
+    </div>
+</div>
+
+@* ════════════════════════════════════════════
+   中段：回覆串清單
+   ════════════════════════════════════════════ *@
+<h4 class="mb-3">回覆記錄（@Model.Replies.Count 筆）</h4>
+
+@if (!Model.Replies.Any())
+{
+    <div class="alert alert-light border text-center text-muted mb-4">尚無回覆記錄</div>
+}
+else
+{
+    @foreach (var reply in Model.Replies)
+    {
+        @* 依 ReplyType 決定對齊方向與底色：0=客戶回覆（灰底靠左），1=官方回覆（藍底靠右） *@
+        bool isAdmin = reply.ReplyType == 1;
+        string rowClass     = isAdmin ? "justify-content-end" : "justify-content-start";
+        string bubbleClass  = isAdmin ? "bg-primary bg-opacity-10 border-primary" : "bg-light";
+        string typeLabel    = isAdmin ? "官方回覆" : "客戶回覆";
+        string typeBadge    = isAdmin ? "bg-primary" : "bg-secondary";
+
+        <div class="d-flex @rowClass mb-3">
+            <div class="card border @bubbleClass" style="max-width: 75%;">
+                <div class="card-header py-1 d-flex justify-content-between align-items-center gap-2">
+                    <div>
+                        @* 回覆類型標籤 *@
+                        <span class="badge @typeBadge">@typeLabel</span>
+                        @* 若為私密回覆則顯示「私密」badge（僅後台可見） *@
+                        @if (!reply.IsPublic)
+                        {
+                            <span class="badge bg-warning text-dark ms-1">私密</span>
+                        }
+                    </div>
+                    <small class="text-muted">
+                        @reply.ReplierName &nbsp;｜&nbsp; @reply.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                    </small>
+                </div>
+                <div class="card-body py-2">
+                    @* pre-wrap 保留換行格式 *@
+                    <p class="mb-0" style="white-space: pre-wrap;">@reply.Content</p>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@* ════════════════════════════════════════════
+   下半部：新增回覆快速表單
+   ════════════════════════════════════════════ *@
+<div class="card mt-4">
+    <div class="card-header">
+        <strong>新增回覆</strong>
+    </div>
+    <div class="card-body">
+
+        @* 顯示回覆表單的驗證錯誤 *@
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        @* 表單提交至 AddReply Action *@
+        <form asp-controller="Feedback" asp-action="AddReply" method="post">
+
+            @* FeedbackId 以隱藏欄位傳遞，確保回覆對應到正確的意見 *@
+            <input asp-for="NewReply.FeedbackId" type="hidden" />
+
+            @* ── 回覆類型（下拉選單） ── *@
+            <div class="mb-3">
+                <label asp-for="NewReply.ReplyType" class="form-label">回覆類型</label>
+                <select asp-for="NewReply.ReplyType"
+                        asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.ReplyTypeList)"
+                        class="form-select" style="max-width: 200px;">
+                </select>
+                <span asp-validation-for="NewReply.ReplyType" class="text-danger small"></span>
+            </div>
+
+            @* ── 回覆者姓名 ── *@
+            <div class="mb-3">
+                <label asp-for="NewReply.ReplierName" class="form-label">回覆者姓名</label>
+                <input asp-for="NewReply.ReplierName" class="form-control"
+                       placeholder="請輸入回覆者姓名" style="max-width: 300px;" />
+                <span asp-validation-for="NewReply.ReplierName" class="text-danger small"></span>
+            </div>
+
+            @* ── 回覆內容 ── *@
+            <div class="mb-3">
+                <label asp-for="NewReply.Content" class="form-label">回覆內容</label>
+                <textarea asp-for="NewReply.Content" class="form-control" rows="4"
+                          placeholder="請輸入回覆內容..."></textarea>
+                <span asp-validation-for="NewReply.Content" class="text-danger small"></span>
+            </div>
+
+            @* ── 公開顯示核取方塊 ── *@
+            <div class="mb-4 form-check">
+                <input asp-for="NewReply.IsPublic" class="form-check-input" type="checkbox" />
+                <label asp-for="NewReply.IsPublic" class="form-check-label">
+                    公開顯示（取消勾選表示私密，僅後台可見）
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-success">送出回覆</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @* 引入前端驗證腳本，確保表單提交前觸發即時驗證 *@
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

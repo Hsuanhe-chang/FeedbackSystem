@@ -1,0 +1,235 @@
+@model IEnumerable<FeedbackSystem.Models.ViewModels.FeedbackListItemViewModel>
+
+@{
+    ViewData["Title"] = "意見管理";
+
+    // 從 ViewBag 取得分頁與篩選狀態
+    byte? currentStatus   = ViewBag.CurrentStatus;
+    byte? currentPriority = ViewBag.CurrentPriority;
+    int   currentPage     = ViewBag.CurrentPage;
+    int   totalPages      = ViewBag.TotalPages;
+    int   totalCount      = ViewBag.TotalCount;
+
+    // 輔助函式：依 Status 值回傳對應的 Bootstrap badge class
+    string GetStatusBadge(byte status) => status switch
+    {
+        0 => "bg-secondary",   // 待處理：灰色
+        1 => "bg-primary",     // 處理中：藍色
+        2 => "bg-success",     // 已回覆：綠色
+        3 => "bg-dark",        // 已關閉：黑色
+        _ => "bg-secondary"
+    };
+
+    // 輔助函式：依 Status 值回傳中文說明
+    string GetStatusText(byte status) => status switch
+    {
+        0 => "待處理",
+        1 => "處理中",
+        2 => "已回覆",
+        3 => "已關閉",
+        _ => "未知"
+    };
+
+    // 輔助函式：依 Priority 值回傳對應的 Bootstrap badge class
+    string GetPriorityBadge(byte priority) => priority switch
+    {
+        1 => "bg-secondary",   // 一般：灰色
+        2 => "bg-warning text-dark",  // 重要：橙色
+        3 => "bg-danger",      // 緊急：紅色
+        _ => "bg-secondary"
+    };
+
+    // 輔助函式：依 Priority 值回傳中文說明
+    string GetPriorityText(byte priority) => priority switch
+    {
+        1 => "一般",
+        2 => "重要",
+        3 => "緊急",
+        _ => "未知"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>意見管理</h2>
+    @* 前台新增意見按鈕 *@
+    <a asp-controller="Feedback" asp-action="Create" class="btn btn-success">
+        ＋ 提交新意見
+    </a>
+</div>
+
+@* ── 篩選區塊 ── *@
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-controller="Feedback" asp-action="Index" class="row g-3 align-items-end">
+            @* Status 篩選下拉 *@
+            <div class="col-md-3">
+                <label class="form-label">處理狀態</label>
+                <select name="status" class="form-select">
+                    <option value="">全部狀態</option>
+                    @* 依目前篩選值標記對應 option 為 selected，使用 @if 分支避免 Tag Helper 限制 *@
+                    @foreach (var item in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.StatusList)
+                    {
+                        bool isSelected = currentStatus.HasValue && currentStatus.Value.ToString() == item.Value;
+                        if (isSelected)
+                        {
+                            <option value="@item.Value" selected>@item.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            @* Priority 篩選下拉 *@
+            <div class="col-md-3">
+                <label class="form-label">優先等級</label>
+                <select name="priority" class="form-select">
+                    <option value="">全部等級</option>
+                    @* 同上，以 @if 分支處理 selected 狀態 *@
+                    @foreach (var item in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.PriorityList)
+                    {
+                        bool isSelected = currentPriority.HasValue && currentPriority.Value.ToString() == item.Value;
+                        if (isSelected)
+                        {
+                            <option value="@item.Value" selected>@item.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">篩選</button>
+            </div>
+            <div class="col-md-2">
+                @* 清除篩選條件 *@
+                <a asp-controller="Feedback" asp-action="Index" class="btn btn-outline-secondary w-100">清除</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* ── 資料總筆數提示 ── *@
+<p class="text-muted mb-2">共 <strong>@totalCount</strong> 筆意見</p>
+
+@* ── 資料表格 ── *@
+<div class="table-responsive">
+    <table class="table table-hover table-bordered align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>追蹤代碼</th>
+                <th>客戶姓名</th>
+                <th>類別</th>
+                <th>主旨</th>
+                <th>狀態</th>
+                <th>優先等級</th>
+                <th>回覆數</th>
+                <th>建立時間</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Any())
+            {
+                @* 無資料時顯示提示行 *@
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">目前尚無意見資料</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>
+                            <code>@item.TrackingCode</code>
+                        </td>
+                        <td>@item.CustomerName</td>
+                        <td>@item.Category</td>
+                        <td>
+                            @* 主旨過長時截斷顯示，完整內容請至詳情頁查看 *@
+                            @(item.Subject.Length > 30 ? item.Subject.Substring(0, 30) + "…" : item.Subject)
+                        </td>
+                        <td>
+                            @* Status badge，顏色依狀態決定 *@
+                            <span class="badge @GetStatusBadge(item.Status)">
+                                @GetStatusText(item.Status)
+                            </span>
+                        </td>
+                        <td>
+                            @* Priority badge，顏色依等級決定 *@
+                            <span class="badge @GetPriorityBadge(item.Priority)">
+                                @GetPriorityText(item.Priority)
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            @item.ReplyCount
+                        </td>
+                        <td>
+                            @item.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                        </td>
+                        <td>
+                            @* 操作按鈕：詳情 / 編輯 *@
+                            <a asp-controller="Feedback" asp-action="Detail"
+                               asp-route-id="@item.FeedbackId"
+                               class="btn btn-sm btn-outline-info me-1">詳情</a>
+                            <a asp-controller="Feedback" asp-action="Edit"
+                               asp-route-id="@item.FeedbackId"
+                               class="btn btn-sm btn-outline-warning">編輯</a>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@* ── 分頁元件 ── *@
+@if (totalPages > 1)
+{
+    <nav aria-label="意見列表分頁">
+        <ul class="pagination justify-content-center">
+            @* 上一頁按鈕（第一頁時停用） *@
+            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                <a class="page-link"
+                   asp-controller="Feedback" asp-action="Index"
+                   asp-route-page="@(currentPage - 1)"
+                   asp-route-status="@currentStatus"
+                   asp-route-priority="@currentPriority">上一頁</a>
+            </li>
+
+            @* 依總頁數產生頁碼按鈕 *@
+            @for (int p = 1; p <= totalPages; p++)
+            {
+                // 頁碼過多時僅顯示附近頁（目前頁 ±2 內）
+                if (p == 1 || p == totalPages || Math.Abs(p - currentPage) <= 2)
+                {
+                    <li class="page-item @(p == currentPage ? "active" : "")">
+                        <a class="page-link"
+                           asp-controller="Feedback" asp-action="Index"
+                           asp-route-page="@p"
+                           asp-route-status="@currentStatus"
+                           asp-route-priority="@currentPriority">@p</a>
+                    </li>
+                }
+                else if (p == currentPage - 3 || p == currentPage + 3)
+                {
+                    // 在頁碼跳過處顯示省略號
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                }
+            }
+
+            @* 下一頁按鈕（最後一頁時停用） *@
+            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                <a class="page-link"
+                   asp-controller="Feedback" asp-action="Index"
+                   asp-route-page="@(currentPage + 1)"
+                   asp-route-status="@currentStatus"
+                   asp-route-priority="@currentPriority">下一頁</a>
+            </li>
+        </ul>
+    </nav>
+}

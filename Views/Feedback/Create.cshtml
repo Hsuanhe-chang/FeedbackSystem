@@ -1,0 +1,95 @@
+@model FeedbackSystem.Models.ViewModels.FeedbackCreateViewModel
+
+@{
+    ViewData["Title"] = "提交意見";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+
+        <h2 class="mb-4">提交意見</h2>
+
+        @* 整體驗證錯誤摘要（非欄位層級的錯誤，例如 TrackingCode 重複） *@
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <form asp-controller="Feedback" asp-action="Create" method="post">
+
+            @* ── TrackingCode：隱藏傳遞 + 唯讀顯示 ── *@
+            @* 由後端自動產生，不允許使用者修改 *@
+            <input asp-for="TrackingCode" type="hidden" />
+            <div class="mb-3">
+                <label class="form-label">追蹤代碼</label>
+                <input type="text" class="form-control bg-light"
+                       value="@Model?.TrackingCode" readonly />
+                <div class="form-text text-muted">
+                    系統自動產生，請記錄此代碼以便日後查詢意見進度。
+                </div>
+            </div>
+
+            @* ── 客戶姓名 ── *@
+            <div class="mb-3">
+                <label asp-for="CustomerName" class="form-label"></label>
+                <input asp-for="CustomerName" class="form-control" placeholder="請輸入您的姓名" />
+                <span asp-validation-for="CustomerName" class="text-danger small"></span>
+            </div>
+
+            @* ── 電子信箱 ── *@
+            <div class="mb-3">
+                <label asp-for="CustomerEmail" class="form-label"></label>
+                <input asp-for="CustomerEmail" class="form-control" type="email" placeholder="example@email.com" />
+                <span asp-validation-for="CustomerEmail" class="text-danger small"></span>
+            </div>
+
+            @* ── 聯絡電話（選填）── *@
+            @* 選填但若有輸入，需符合台灣市話或手機格式 *@
+            <div class="mb-3">
+                <label asp-for="CustomerPhone" class="form-label">
+                    聯絡電話 <span class="text-muted">(選填)</span>
+                </label>
+                @* 純數字輸入，不需輸入「-」 *@
+                <input asp-for="CustomerPhone" class="form-control"
+                       placeholder="純數字即可，例如：0212345678 或 0912345678" />
+                @* 顯示 RegularExpression 格式驗證錯誤訊息 *@
+                <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
+            </div>
+
+            @* ── 意見類別（下拉選單） ── *@
+            <div class="mb-3">
+                <label asp-for="Category" class="form-label"></label>
+                <select asp-for="Category"
+                        asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.CategoryList)"
+                        class="form-select">
+                    <option value="">-- 請選擇類別 --</option>
+                </select>
+                <span asp-validation-for="Category" class="text-danger small"></span>
+            </div>
+
+            @* ── 意見主旨 ── *@
+            <div class="mb-3">
+                <label asp-for="Subject" class="form-label"></label>
+                <input asp-for="Subject" class="form-control" placeholder="請簡要描述您的意見主旨" />
+                <span asp-validation-for="Subject" class="text-danger small"></span>
+            </div>
+
+            @* ── 意見內容 ── *@
+            <div class="mb-4">
+                <label asp-for="Content" class="form-label"></label>
+                <textarea asp-for="Content" class="form-control" rows="6"
+                          placeholder="請詳細描述您的意見或問題..."></textarea>
+                <span asp-validation-for="Content" class="text-danger small"></span>
+            </div>
+
+            @* ── 操作按鈕 ── *@
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">提交意見</button>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">取消</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @* 引入 jQuery Validation 以啟用前端即時驗證 *@
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

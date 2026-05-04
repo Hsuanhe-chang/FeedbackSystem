@@ -1,0 +1,127 @@
+@model FeedbackSystem.Models.ViewModels.FeedbackEditViewModel
+
+@{
+    ViewData["Title"] = "編輯意見";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-9">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>編輯意見</h2>
+            <a asp-controller="Feedback" asp-action="Detail"
+               asp-route-id="@Model.FeedbackId"
+               class="btn btn-outline-secondary">返回詳情</a>
+        </div>
+
+        @* 整體驗證錯誤摘要 *@
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        @* ── 唯讀識別欄位區塊（非表單 input，僅顯示） ── *@
+        <div class="card mb-4 border-secondary">
+            <div class="card-header text-muted">
+                <small>識別資訊（唯讀，不可修改）</small>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>追蹤代碼</strong>
+                        <p><code>@Model.TrackingCode</code></p>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>客戶姓名</strong>
+                        <p>@Model.CustomerName</p>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>電子信箱</strong>
+                        <p>@Model.CustomerEmail</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>建立時間</strong>
+                        <p>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ── 可編輯表單 ── *@
+        <form asp-controller="Feedback" asp-action="Edit"
+              asp-route-id="@Model.FeedbackId" method="post">
+
+            @* FeedbackId 以 hidden 傳遞，確保 POST 時能識別要更新哪筆資料 *@
+            <input asp-for="FeedbackId" type="hidden" />
+
+            <div class="row mb-3">
+                @* ── 意見類別（下拉選單） ── *@
+                <div class="col-md-4">
+                    <label asp-for="Category" class="form-label"></label>
+                    <select asp-for="Category"
+                            asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.CategoryList)"
+                            class="form-select">
+                        <option value="">-- 請選擇 --</option>
+                    </select>
+                    <span asp-validation-for="Category" class="text-danger small"></span>
+                </div>
+
+                @* ── 處理狀態（下拉選單） ── *@
+                <div class="col-md-4">
+                    <label asp-for="Status" class="form-label"></label>
+                    <select asp-for="Status"
+                            asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.StatusList)"
+                            class="form-select">
+                    </select>
+                    <span asp-validation-for="Status" class="text-danger small"></span>
+                </div>
+
+                @* ── 優先等級（下拉選單） ── *@
+                <div class="col-md-4">
+                    <label asp-for="Priority" class="form-label"></label>
+                    <select asp-for="Priority"
+                            asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.PriorityList)"
+                            class="form-select">
+                    </select>
+                    <span asp-validation-for="Priority" class="text-danger small"></span>
+                </div>
+            </div>
+
+            @* ── 意見主旨 ── *@
+            <div class="mb-3">
+                <label asp-for="Subject" class="form-label"></label>
+                <input asp-for="Subject" class="form-control" />
+                <span asp-validation-for="Subject" class="text-danger small"></span>
+            </div>
+
+            @* ── 意見內容 ── *@
+            <div class="mb-3">
+                <label asp-for="Content" class="form-label"></label>
+                <textarea asp-for="Content" class="form-control" rows="6"></textarea>
+                <span asp-validation-for="Content" class="text-danger small"></span>
+            </div>
+
+            @* ── 管理員備註（選填，不對客戶顯示） ── *@
+            <div class="mb-4">
+                <label asp-for="AdminNote" class="form-label">
+                    管理員備註 <span class="text-muted">(選填，不對客戶顯示)</span>
+                </label>
+                <textarea asp-for="AdminNote" class="form-control" rows="3"
+                          placeholder="輸入管理員內部備註..."></textarea>
+            </div>
+
+            @* ── 操作按鈕 ── *@
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">儲存變更</button>
+                <a asp-controller="Feedback" asp-action="Detail"
+                   asp-route-id="@Model.FeedbackId"
+                   class="btn btn-outline-secondary">取消</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @* 引入前端驗證腳本 *@
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

@@ -4,5 +4,19 @@
             "file": ".copilot-commit-message-instructions.md"
         }
     ],
-    "github.copilot.chat.localeOverride": "zh-TW"
+    "github.copilot.chat.localeOverride": "zh-TW",
+    "chat.tools.terminal.autoApprove": {
+        "dotnet add": true,
+        "dotnet list": true,
+        "Set-Content": true,
+        "dotnet build": true,
+        "sqlcmd": true,
+        "Out-File": true,
+        "Add-Content": true,
+        "Test-Path": true,
+        "type": true,
+        "127..155": true,
+        "ForEach-Object": true,
+        "155..270": true
+    }
 }
