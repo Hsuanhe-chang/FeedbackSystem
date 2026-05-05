@@ -220,6 +220,26 @@ public class FeedbackEndpointTests : IClassFixture<WebApplicationFactory<Program
             var idMatch = Regex.Match(location, @"/Feedback/Detail/(\d+)", RegexOptions.IgnoreCase);
             if (idMatch.Success)
                 newFeedbackId = int.Parse(idMatch.Groups[1].Value);
+
+            // Assert 2：直接向 DB 查詢（raw SELECT，繞過 HTTP 與 SP 抽象層），
+            // 確認 HTTP POST 觸發的寫入操作確實將資料持久化到資料庫。
+            // 連線字串由此類建構子從 appsettings.json 讀取。
+            if (newFeedbackId > 0)
+            {
+                var dbRow = await QueryFeedbackDirectFromDbAsync(newFeedbackId);
+                dbRow.Exists.Should().BeTrue(
+                    $"HTTP POST 成功後， FeedbackId={newFeedbackId} 應在 Feedback 資料表中確實存在");
+                dbRow.CustomerName.Should().Be("[整合測試] POST 端點測試客戶",
+                    "DB 實際存入的 CustomerName 應與 POST 表單資料一致");
+                dbRow.TrackingCode.Should().Be(trackingCode,
+                    "DB 實際存入的 TrackingCode 應與頁面產生的值一致");
+                dbRow.CustomerEmail.Should().Be("endpoint-test@example.com",
+                    "DB 實際存入的 CustomerEmail 應與 POST 表單資料一致");
+                dbRow.Category.Should().Be("其他",
+                    "DB 實際存入的 Category 應與 POST 表單資料一致");
+                dbRow.Status.Should().Be(0, "HTTP POST 新增的意見 Status 預設應為 0（待處理）");
+                dbRow.Priority.Should().Be(1, "HTTP POST 新增的意見 Priority 預設應為 1（一般）");
+            }
         }
         finally
         {
@@ -329,8 +349,64 @@ public class FeedbackEndpointTests : IClassFixture<WebApplicationFactory<Program
     // 私有工具方法
     // ═════════════════════════════════════════════════════════════════
 
+    /// <summary>    /// DB 直查結果容器：用於 QueryFeedbackDirectFromDbAsync 回傳。
+    /// </summary>
+    private record FeedbackDbRow(
+        bool    Exists,
+        string  TrackingCode,
+        string  CustomerName,
+        string  CustomerEmail,
+        string? CustomerPhone,
+        string  Category,
+        string  Subject,
+        string  Content,
+        byte    Status,
+        byte    Priority);
+
     /// <summary>
-    /// Teardown 工具方法：依 FeedbackId 刪除測試資料。
+    /// 直接以 SqlConnection + raw SELECT 查詢 Feedback 資料表，
+    /// 完全繞過 HTTP 層、Controller、SP 與 Repository，
+    /// 獨立驗證 HTTP POST 操作對資料庫的實際寫入結果。
+    /// 連線字串由建構子從 appsettings.json 讀取。
+    /// </summary>
+    /// <param name="feedbackId">要查詢的 FeedbackId</param>
+    /// <returns>查詢結果；若查無資料則 Exists = false</returns>
+    private async Task<FeedbackDbRow> QueryFeedbackDirectFromDbAsync(int feedbackId)
+    {
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+
+        // raw SELECT：繞過所有 SP/Repository 抽象，直接讀取資料表
+        await using var cmd = new SqlCommand(
+            @"SELECT TrackingCode, CustomerName, CustomerEmail, CustomerPhone,
+                     Category, Subject, Content, Status, Priority
+              FROM   Feedback
+              WHERE  FeedbackId = @FeedbackId", conn);
+        cmd.Parameters.AddWithValue("@FeedbackId", feedbackId);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        // 查無資料：表示 HTTP POST 未寫入 DB
+        if (!await reader.ReadAsync())
+            return new FeedbackDbRow(false, "", "", "", null, "", "", "", 0, 0);
+
+        return new FeedbackDbRow(
+            Exists:        true,
+            TrackingCode:  reader.GetString(reader.GetOrdinal("TrackingCode")),
+            CustomerName:  reader.GetString(reader.GetOrdinal("CustomerName")),
+            CustomerEmail: reader.GetString(reader.GetOrdinal("CustomerEmail")),
+            // CustomerPhone 為 nullable，需先判斷 IsDBNull 再讀取
+            CustomerPhone: reader.IsDBNull(reader.GetOrdinal("CustomerPhone"))
+                               ? null
+                               : reader.GetString(reader.GetOrdinal("CustomerPhone")),
+            Category:      reader.GetString(reader.GetOrdinal("Category")),
+            Subject:       reader.GetString(reader.GetOrdinal("Subject")),
+            Content:       reader.GetString(reader.GetOrdinal("Content")),
+            Status:        reader.GetByte(reader.GetOrdinal("Status")),
+            Priority:      reader.GetByte(reader.GetOrdinal("Priority")));
+    }
+
+    /// <summary>    /// Teardown 工具方法：依 FeedbackId 刪除測試資料。
     /// 遵守外鍵約束順序：先刪 FeedbackReply 子資料，再刪 Feedback 主資料。
     /// 使用參數化 SQL，防止 SQL Injection。
     /// </summary>

@@ -208,9 +208,20 @@ public class FeedbackRepositoryIntegrationTests : IClassFixture<IntegrationTestF
             // Act：呼叫 usp_Feedback_Insert
             newFeedbackId = await _sut.InsertFeedbackAsync(model);
 
-            // Assert：SP 應回傳正整數（DB IDENTITY 新值）
+            // Assert 1：SP 應回傳正整數（DB IDENTITY 新值）
             newFeedbackId.Should().BeGreaterThan(0,
                 "usp_Feedback_Insert 應回傳新產生的 FeedbackId（IDENTITY 值），必為正整數");
+
+            // Assert 2：直接向 DB 查詢（raw SELECT，繞過所有 SP/Repository 抽象層），
+            // 確認資料確實寫入並持久化到資料庫，而非只是 SP 回傳值正確。
+            // 連線字串來自 IntegrationTestFixture，最終讀取自 appsettings.json。
+            var dbRow = await QueryFeedbackDirectAsync(newFeedbackId);
+            dbRow.Exists.Should().BeTrue("SP 回傳 FeedbackId 後，Feedback 資料表中應確實存在該筆資料");
+            dbRow.TrackingCode.Should().Be(model.TrackingCode, "DB 實際儲存的 TrackingCode 應與寫入值一致");
+            dbRow.CustomerName.Should().Be(model.CustomerName, "DB 實際儲存的 CustomerName 應與寫入值一致");
+            dbRow.CustomerEmail.Should().Be(model.CustomerEmail, "DB 實際儲存的 CustomerEmail 應與寫入值一致");
+            dbRow.CustomerPhone.Should().BeNull("CustomerPhone 傳入 null，DB 中應儲存為 NULL");
+            dbRow.Category.Should().Be(model.Category, "DB 實際儲存的 Category 應與寫入值一致");
         }
         finally
         {
@@ -264,6 +275,22 @@ public class FeedbackRepositoryIntegrationTests : IClassFixture<IntegrationTestF
             // 新增時 Status 預設為 0（待處理）、Priority 預設為 1（一般）
             detail.Status.Should().Be(0, "新增的意見 Status 預設應為 0（待處理）");
             detail.Priority.Should().Be(1, "新增的意見 Priority 預設應為 1（一般）");
+
+            // ─── 直接向 DB 查詢（raw SELECT），獨立於 SP 抽象層驗證資料持久化 ───
+            // 此步驟與上方的 GetByIdAsync SP 驗證互補：
+            // 即使 usp_Feedback_GetById 本身有 bug，此處仍能確認底層資料表數值正確。
+            // 連線字串來自 IntegrationTestFixture，最終讀取自 appsettings.json。
+            var dbRow = await QueryFeedbackDirectAsync(newFeedbackId);
+            dbRow.Exists.Should().BeTrue("DB 中應確實存在剛新增的資料");
+            dbRow.TrackingCode.Should().Be(model.TrackingCode, "DB 資料表實際值 TrackingCode 應與寫入值一致");
+            dbRow.CustomerName.Should().Be(model.CustomerName, "DB 資料表實際值 CustomerName 應與寫入值一致");
+            dbRow.CustomerEmail.Should().Be(model.CustomerEmail, "DB 資料表實際值 CustomerEmail 應與寫入值一致");
+            dbRow.CustomerPhone.Should().Be(model.CustomerPhone, "DB 資料表實際值 CustomerPhone 應與寫入值一致");
+            dbRow.Category.Should().Be(model.Category, "DB 資料表實際值 Category 應與寫入值一致");
+            dbRow.Subject.Should().Be(model.Subject, "DB 資料表實際值 Subject 應與寫入值一致");
+            dbRow.Content.Should().Be(model.Content, "DB 資料表實際值 Content 應與寫入值一致");
+            dbRow.Status.Should().Be(0, "DB 資料表實際值 Status 預設應為 0（待處理）");
+            dbRow.Priority.Should().Be(1, "DB 資料表實際值 Priority 預設應為 1（一般）");
         }
         finally
         {
@@ -342,6 +369,64 @@ public class FeedbackRepositoryIntegrationTests : IClassFixture<IntegrationTestF
     // ═════════════════════════════════════════════════════════════════
     // 私有工具方法
     // ═════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// DB 直查結果容器：以具名 record 取代匿名型別，提高可讀性。
+    /// 用於 QueryFeedbackDirectAsync 回傳，包含從 Feedback 資料表直接讀取的欄位值。
+    /// </summary>
+    private record FeedbackDbRow(
+        bool   Exists,
+        string TrackingCode,
+        string CustomerName,
+        string CustomerEmail,
+        string? CustomerPhone,
+        string Category,
+        string Subject,
+        string Content,
+        byte   Status,
+        byte   Priority);
+
+    /// <summary>
+    /// 直接以 SqlConnection + raw SELECT 查詢 Feedback 資料表，
+    /// 完全繞過 SP 與 Repository 抽象層，驗證資料確實持久化到 DB。
+    /// 連線字串透過 IntegrationTestFixture 從 appsettings.json 讀取。
+    /// </summary>
+    /// <param name="feedbackId">要查詢的 FeedbackId</param>
+    /// <returns>查詢結果封裝為 FeedbackDbRow；若查無資料則 Exists = false</returns>
+    private async Task<FeedbackDbRow> QueryFeedbackDirectAsync(int feedbackId)
+    {
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+
+        // raw SELECT：直接從資料表讀取，不依賴任何 Stored Procedure
+        await using var cmd = new SqlCommand(
+            @"SELECT TrackingCode, CustomerName, CustomerEmail, CustomerPhone,
+                     Category, Subject, Content, Status, Priority
+              FROM   Feedback
+              WHERE  FeedbackId = @FeedbackId", conn);
+        cmd.Parameters.AddWithValue("@FeedbackId", feedbackId);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        // 查無資料：回傳 Exists = false 的預設 record
+        if (!await reader.ReadAsync())
+            return new FeedbackDbRow(false, "", "", "", null, "", "", "", 0, 0);
+
+        return new FeedbackDbRow(
+            Exists:        true,
+            TrackingCode:  reader.GetString(reader.GetOrdinal("TrackingCode")),
+            CustomerName:  reader.GetString(reader.GetOrdinal("CustomerName")),
+            CustomerEmail: reader.GetString(reader.GetOrdinal("CustomerEmail")),
+            // CustomerPhone 為 nullable，需先判斷 IsDBNull 再讀取
+            CustomerPhone: reader.IsDBNull(reader.GetOrdinal("CustomerPhone"))
+                               ? null
+                               : reader.GetString(reader.GetOrdinal("CustomerPhone")),
+            Category:      reader.GetString(reader.GetOrdinal("Category")),
+            Subject:       reader.GetString(reader.GetOrdinal("Subject")),
+            Content:       reader.GetString(reader.GetOrdinal("Content")),
+            Status:        reader.GetByte(reader.GetOrdinal("Status")),
+            Priority:      reader.GetByte(reader.GetOrdinal("Priority")));
+    }
 
     /// <summary>
     /// Teardown 工具方法：依 FeedbackId 刪除測試資料。

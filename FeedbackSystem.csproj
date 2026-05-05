@@ -26,4 +26,12 @@
     <None Remove="FeedbackSystem.IntegrationTests/**" />
   </ItemGroup>
 
+  <!-- 排除 E2E 測試專案子目錄，避免主專案誤將 Playwright 測試檔案編譯進來 -->
+  <ItemGroup>
+    <Compile Remove="FeedbackSystem.E2ETests/**" />
+    <Content Remove="FeedbackSystem.E2ETests/**" />
+    <EmbeddedResource Remove="FeedbackSystem.E2ETests/**" />
+    <None Remove="FeedbackSystem.E2ETests/**" />
+  </ItemGroup>
+
 </Project>
