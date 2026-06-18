@@ -35,9 +35,10 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
+// 預設路由改為導向意見回饋列表（Feedback/Index）
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Feedback}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 
