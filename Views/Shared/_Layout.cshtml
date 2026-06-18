@@ -20,13 +20,13 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        @* 後台：管理員意見列表（排第一） *@
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Feedback" asp-action="Index">意見管理</a>
+                        </li>
                         @* 前台：客戶提交意見入口 *@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Feedback" asp-action="Create">提交意見</a>
-                        </li>
-                        @* 後台：管理員意見列表 *@
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Feedback" asp-action="Index">意見管理</a>
                         </li>
                         @* 前台：客戶查詢意見進度 *@
                         <li class="nav-item">
