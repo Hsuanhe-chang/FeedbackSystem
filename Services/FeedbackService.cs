@@ -31,9 +31,9 @@ public class FeedbackService : IFeedbackService
 
     /// <inheritdoc/>
     public Task<(IEnumerable<FeedbackListItemViewModel> Items, int TotalCount)> GetPagedListAsync(
-        byte? status, byte? priority, int page, int pageSize)
+        byte? status, byte? priority, string? keyword, int page, int pageSize)
         // 無商業邏輯，直接轉給 Repository 執行 SP
-        => _repository.GetPagedListAsync(status, priority, page, pageSize);
+        => _repository.GetPagedListAsync(status, priority, keyword, page, pageSize);
 
     // ─────────────────────────────────────────────────────────────────
     // 2. 確認 TrackingCode：直接委派 Repository

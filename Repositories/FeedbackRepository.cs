@@ -48,7 +48,7 @@ public class FeedbackRepository : IFeedbackRepository
 
     /// <inheritdoc/>
     public async Task<(IEnumerable<FeedbackListItemViewModel> Items, int TotalCount)> GetPagedListAsync(
-        byte? status, byte? priority, int page, int pageSize)
+        byte? status, byte? priority, string? keyword, int page, int pageSize)
     {
         var items = new List<FeedbackListItemViewModel>();
         int totalCount = 0;
@@ -62,6 +62,8 @@ public class FeedbackRepository : IFeedbackRepository
         // 傳入篩選參數（null 對應 SP 中的 nullable 參數）
         cmd.Parameters.AddWithValue("@Status",   (object?)status   ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@Priority", (object?)priority ?? DBNull.Value);
+        // 傳入關鍵字參數（null=不篩選；SP 內以 LIKE '%'+@Keyword+'%' 比對）
+        cmd.Parameters.AddWithValue("@Keyword",  (object?)keyword  ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@Page",     page);
         cmd.Parameters.AddWithValue("@PageSize", pageSize);
 

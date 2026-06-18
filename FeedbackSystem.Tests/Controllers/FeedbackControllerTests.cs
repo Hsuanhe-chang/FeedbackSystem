@@ -53,11 +53,11 @@ public class FeedbackControllerTests
             new() { FeedbackId = 2, CustomerName = "客戶B", TrackingCode = "FB002" }
         };
         _mockFeedbackService
-            .GetPagedListAsync(null, null, 1, 10)
+            .GetPagedListAsync(null, null, null, 1, 10)
             .Returns((fakeItems.AsEnumerable(), 2));
 
         // Act：呼叫 GET Index，不傳篩選條件
-        var result = await _sut.Index(null, null, 1);
+        var result = await _sut.Index(null, null, null, 1);
 
         // Assert 1：必須回傳 ViewResult
         var viewResult = Assert.IsType<ViewResult>(result);
