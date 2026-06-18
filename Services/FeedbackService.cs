@@ -122,4 +122,41 @@ public class FeedbackService : IFeedbackService
     /// <inheritdoc/>
     public Task InsertReplyAsync(FeedbackReplyCreateViewModel model)
         => _repository.InsertReplyAsync(model);
+
+    // ─────────────────────────────────────────────────────────────────
+    // 9. 依 TrackingCode 取得公開意見進度（商業邏輯：過濾私密資料）
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <inheritdoc/>
+    public async Task<FeedbackTrackResultViewModel?> GetPublicByTrackingCodeAsync(string trackingCode)
+    {
+        // 步驟一：透過 Repository 呼叫 usp_Feedback_GetByTrackingCode 查詢主體資料
+        var detail = await _repository.GetByTrackingCodeAsync(trackingCode);
+
+        // 找不到資料時直接回傳 null，呼叫端（Controller）顯示「找不到意見」提示
+        if (detail == null)
+            return null;
+
+        // 步驟二：取得此意見的所有回覆串（含私密回覆）
+        var allReplies = await _repository.GetRepliesByFeedbackIdAsync(detail.FeedbackId);
+
+        // 步驟三：過濾出 IsPublic = true 的公開回覆，私密回覆不對客戶揭露
+        var publicReplies = allReplies.Where(r => r.IsPublic).ToList();
+
+        // 步驟四：將 FeedbackDetailViewModel 映射到 FeedbackTrackResultViewModel（公開安全欄位）
+        // 刻意省略 AdminNote、CustomerEmail、CustomerPhone、Priority，防止內部資訊外洩
+        return new FeedbackTrackResultViewModel
+        {
+            TrackingCode  = detail.TrackingCode,
+            CustomerName  = detail.CustomerName,
+            Category      = detail.Category,
+            Subject       = detail.Subject,
+            Content       = detail.Content,
+            Status        = detail.Status,
+            ReplyCount    = detail.ReplyCount,
+            LatestReplyAt = detail.LatestReplyAt,
+            CreatedAt     = detail.CreatedAt,
+            PublicReplies = publicReplies
+        };
+    }
 }
