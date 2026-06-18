@@ -62,4 +62,13 @@ public interface IFeedbackRepository
     /// </summary>
     /// <param name="model">新增回覆表單 ViewModel</param>
     Task InsertReplyAsync(FeedbackReplyCreateViewModel model);
+
+    /// <summary>
+    /// 依 TrackingCode 取得單筆意見完整資料（usp_Feedback_GetByTrackingCode）。
+    /// 供前台客戶查詢進度頁使用，回傳值與 GetByIdAsync 相同結構；
+    /// 私密欄位（AdminNote 等）將由 Service 層決定是否對外公開。
+    /// </summary>
+    /// <param name="trackingCode">客戶持有的追蹤代碼</param>
+    /// <returns>意見詳情 ViewModel；若不存在則回傳 null</returns>
+    Task<FeedbackDetailViewModel?> GetByTrackingCodeAsync(string trackingCode);
 }

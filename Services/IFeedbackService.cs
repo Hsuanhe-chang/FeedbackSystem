@@ -75,4 +75,15 @@ public interface IFeedbackService
     /// </summary>
     /// <param name="model">新增回覆表單 ViewModel</param>
     Task InsertReplyAsync(FeedbackReplyCreateViewModel model);
+
+    /// <summary>
+    /// 依 TrackingCode 查詢公開可見的意見進度（對應 usp_Feedback_GetByTrackingCode）。
+    /// 供前台客戶查詢進度頁使用，僅回傳公開安全欄位：
+    ///   ✅ TrackingCode、CustomerName、Category、Subject、Content、Status、ReplyCount、LatestReplyAt、CreatedAt
+    ///   ❌ 不回傳 AdminNote（內部備註）、CustomerEmail/Phone（個資）、Priority（內部管理）
+    /// 回覆串只包含 IsPublic = true 的公開回覆，私密回覆在此方法內過濾。
+    /// </summary>
+    /// <param name="trackingCode">客戶持有的追蹤代碼</param>
+    /// <returns>公開結果 ViewModel；若找不到則回傳 null</returns>
+    Task<FeedbackTrackResultViewModel?> GetPublicByTrackingCodeAsync(string trackingCode);
 }

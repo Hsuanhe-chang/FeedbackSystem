@@ -297,4 +297,57 @@ public class FeedbackRepository : IFeedbackRepository
 
         await cmd.ExecuteNonQueryAsync();
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 8. 依 TrackingCode 取得單筆意見（usp_Feedback_GetByTrackingCode）
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <inheritdoc/>
+    public async Task<FeedbackDetailViewModel?> GetByTrackingCodeAsync(string trackingCode)
+    {
+        await using var conn = await CreateOpenConnectionAsync();
+        await using var cmd = new SqlCommand("usp_Feedback_GetByTrackingCode", conn)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        // 以參數化方式傳入，防止 SQL Injection
+        cmd.Parameters.AddWithValue("@TrackingCode", trackingCode);
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        // 若查無此 TrackingCode 則回傳 null
+        if (!await reader.ReadAsync())
+            return null;
+
+        // 欄位對應邏輯與 GetByIdAsync 完全一致，
+        // 差別在於此 SP 以 TrackingCode 為篩選條件
+        return new FeedbackDetailViewModel
+        {
+            FeedbackId           = reader.GetInt32(reader.GetOrdinal("FeedbackId")),
+            TrackingCode         = reader.GetString(reader.GetOrdinal("TrackingCode")),
+            CustomerName         = reader.GetString(reader.GetOrdinal("CustomerName")),
+            CustomerEmail        = reader.GetString(reader.GetOrdinal("CustomerEmail")),
+            CustomerPhone        = reader.IsDBNull(reader.GetOrdinal("CustomerPhone"))
+                                    ? null
+                                    : reader.GetString(reader.GetOrdinal("CustomerPhone")),
+            Category             = reader.GetString(reader.GetOrdinal("Category")),
+            Subject              = reader.GetString(reader.GetOrdinal("Subject")),
+            Content              = reader.GetString(reader.GetOrdinal("Content")),
+            Status               = reader.GetByte(reader.GetOrdinal("Status")),
+            Priority             = reader.GetByte(reader.GetOrdinal("Priority")),
+            AdminNote            = reader.IsDBNull(reader.GetOrdinal("AdminNote"))
+                                    ? null
+                                    : reader.GetString(reader.GetOrdinal("AdminNote")),
+            LatestReplyContent   = reader.IsDBNull(reader.GetOrdinal("LatestReplyContent"))
+                                    ? null
+                                    : reader.GetString(reader.GetOrdinal("LatestReplyContent")),
+            LatestReplyAt        = reader.IsDBNull(reader.GetOrdinal("LatestReplyAt"))
+                                    ? null
+                                    : reader.GetDateTime(reader.GetOrdinal("LatestReplyAt")),
+            ReplyCount           = reader.GetInt32(reader.GetOrdinal("ReplyCount")),
+            CreatedAt            = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+            UpdatedAt            = reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
+        };
+    }
 }

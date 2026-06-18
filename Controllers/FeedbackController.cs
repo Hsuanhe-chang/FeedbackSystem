@@ -312,4 +312,49 @@ public class FeedbackController : Controller
         return RedirectToAction(nameof(Detail), new { id = model.FeedbackId });
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // Track：前台客戶查詢意見進度
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// [GET] 客戶追蹤查詢頁
+    /// 顯示空白的 TrackingCode 查詢表單，不需要任何預先載入資料
+    /// </summary>
+    [HttpGet]
+    public IActionResult Track()
+    {
+        // 初始化空白 ViewModel，Result=null 且 NotFound=false
+        return View(new FeedbackTrackViewModel());
+    }
+
+    /// <summary>
+    /// [POST] 執行追蹤查詢
+    /// 以客戶輸入的 TrackingCode 查詢意見進度，回傳公開可見的資料
+    /// 無論找到或找不到都留在同一頁（不使用 Redirect，讓使用者可直接看到結果）
+    /// </summary>
+    /// <param name="model">包含 TrackingCode 的查詢表單 ViewModel</param>
+    [HttpPost]
+    public async Task<IActionResult> Track(FeedbackTrackViewModel model)
+    {
+        // ModelState 驗證失敗（例如 TrackingCode 空白）則回傳原表單顯示錯誤
+        if (!ModelState.IsValid)
+            return View(model);
+
+        // 呼叫 Service 依 TrackingCode 查詢公開意見資料（私密欄位已在 Service 層過濾）
+        var result = await _feedbackService.GetPublicByTrackingCodeAsync(model.TrackingCode.Trim());
+
+        if (result == null)
+        {
+            // 找不到對應的意見：設定 NotFound 旗標，View 顯示提示訊息
+            model.NotFound = true;
+        }
+        else
+        {
+            // 查詢成功：將結果填入 ViewModel，View 顯示意見進度卡片
+            model.Result = result;
+        }
+
+        return View(model);
+    }
+
 }
