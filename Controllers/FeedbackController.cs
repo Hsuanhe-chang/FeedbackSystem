@@ -62,19 +62,23 @@ public class FeedbackController : Controller
 
     /// <summary>
     /// [GET] 後台意見列表頁
-    /// 支援 Status / Priority 篩選與分頁（每頁 10 筆）
+    /// 支援 Status / Priority 篩選、關鍵字搜尋（姓名、主旨、追蹤代碼）與分頁（每頁 10 筆）
     /// </summary>
     /// <param name="status">處理狀態篩選（null=全部）</param>
     /// <param name="priority">優先等級篩選（null=全部）</param>
+    /// <param name="keyword">關鍵字搜尋（null=不篩選；模糊比對客戶姓名、主旨、追蹤代碼）</param>
     /// <param name="page">目前頁碼（預設第 1 頁）</param>
     [HttpGet]
-    public async Task<IActionResult> Index(byte? status, byte? priority, int page = 1)
+    public async Task<IActionResult> Index(byte? status, byte? priority, string? keyword, int page = 1)
     {
         // 每頁固定顯示 10 筆
         const int pageSize = 10;
 
-        // 呼叫 Service 取得當頁資料與總筆數
-        var (items, totalCount) = await _feedbackService.GetPagedListAsync(status, priority, page, pageSize);
+        // 空字串視同無關鍵字（避免傳入空字串仍執行 LIKE 篩選）
+        string? normalizedKeyword = string.IsNullOrWhiteSpace(keyword) ? null : keyword.Trim();
+
+        // 呼叫 Service 取得當頁資料與總筆數（含關鍵字篩選）
+        var (items, totalCount) = await _feedbackService.GetPagedListAsync(status, priority, normalizedKeyword, page, pageSize);
 
         // 計算總頁數（無條件進位）
         int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
@@ -82,6 +86,8 @@ public class FeedbackController : Controller
         // 將篩選條件、分頁資訊傳到 View（使用 ViewBag 是因為這些屬於頁面狀態，非主要 ViewModel 資料）
         ViewBag.CurrentStatus   = status;
         ViewBag.CurrentPriority = priority;
+        // 保留正規化後的關鍵字（trim 後），供 View 回填至輸入框
+        ViewBag.CurrentKeyword  = normalizedKeyword;
         ViewBag.CurrentPage     = page;
         ViewBag.TotalPages      = totalPages;
         ViewBag.TotalCount      = totalCount;

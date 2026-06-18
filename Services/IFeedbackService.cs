@@ -11,15 +11,16 @@ public interface IFeedbackService
 {
     /// <summary>
     /// 取得分頁意見列表（對應 usp_Feedback_GetPagedList）
-    /// 支援依 Status、Priority 篩選
+    /// 支援依 Status、Priority 篩選，以及依姓名、主旨、追蹤代碼關鍵字搜尋
     /// </summary>
     /// <param name="status">處理狀態篩選（null=全部，0=待處理，1=處理中，2=已回覆，3=已關閉）</param>
     /// <param name="priority">優先等級篩選（null=全部，1=一般，2=重要，3=緊急）</param>
+    /// <param name="keyword">關鍵字搜尋（null=不篩選；模糊比對 CustomerName、Subject、TrackingCode）</param>
     /// <param name="page">目前頁碼（從 1 開始）</param>
     /// <param name="pageSize">每頁筆數</param>
     /// <returns>當頁資料集合 與 總筆數（用於計算分頁）</returns>
     Task<(IEnumerable<FeedbackListItemViewModel> Items, int TotalCount)> GetPagedListAsync(
-        byte? status, byte? priority, int page, int pageSize);
+        byte? status, byte? priority, string? keyword, int page, int pageSize);
 
     /// <summary>
     /// 確認 TrackingCode 是否已存在（對應 usp_Feedback_CheckTrackingCodeExists）

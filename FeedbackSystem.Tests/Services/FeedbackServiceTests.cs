@@ -251,18 +251,18 @@ public class FeedbackServiceTests
 
         // 設定 Mock：指定篩選條件下的回傳值
         _mockRepository
-            .GetPagedListAsync(null, null, 1, 10)
+            .GetPagedListAsync(null, null, null, 1, 10)
             .Returns((fakeItems.AsEnumerable(), totalCount));
 
         // Act
-        var (items, count) = await _sut.GetPagedListAsync(null, null, 1, 10);
+        var (items, count) = await _sut.GetPagedListAsync(null, null, null, 1, 10);
 
         // Assert 1：確認結果筆數正確
         Assert.Single(items);
         Assert.Equal(totalCount, count);
 
         // Assert 2：確認 Repository 被呼叫並傳入正確的參數
-        _mockRepository.Received(1).GetPagedListAsync(null, null, 1, 10);
+        _mockRepository.Received(1).GetPagedListAsync(null, null, null, 1, 10);
     }
 
     // ══════════════════════════════════════════

@@ -65,8 +65,8 @@ public class FeedbackRepositoryIntegrationTests : IClassFixture<IntegrationTestF
         int page = 1;
         int pageSize = 10;
 
-        // Act：呼叫 Repository，觸發 usp_Feedback_GetPagedList
-        var (items, totalCount) = await _sut.GetPagedListAsync(status, priority, page, pageSize);
+        // Act：呼叫 Repository，觸發 usp_Feedback_GetPagedList（不帶關鍵字）
+        var (items, totalCount) = await _sut.GetPagedListAsync(status, priority, null, page, pageSize);
 
         // Assert
         items.Should().NotBeNull("SP 應永遠回傳清單物件，即使是空清單也不應為 null");
@@ -103,7 +103,7 @@ public class FeedbackRepositoryIntegrationTests : IClassFixture<IntegrationTestF
         int pageSize = 100;
 
         // Act
-        var (items, _) = await _sut.GetPagedListAsync(filterStatus, null, page, pageSize);
+        var (items, _) = await _sut.GetPagedListAsync(filterStatus, null, null, page, pageSize);
 
         // Assert：每筆資料的 Status 都應等於篩選值
         foreach (var item in items)
@@ -127,7 +127,7 @@ public class FeedbackRepositoryIntegrationTests : IClassFixture<IntegrationTestF
         int pageSize = 100;
 
         // Act
-        var (items, _) = await _sut.GetPagedListAsync(null, filterPriority, page, pageSize);
+        var (items, _) = await _sut.GetPagedListAsync(null, filterPriority, null, page, pageSize);
 
         // Assert：每筆資料的 Priority 都應等於篩選值
         foreach (var item in items)
@@ -148,7 +148,7 @@ public class FeedbackRepositoryIntegrationTests : IClassFixture<IntegrationTestF
         int pageSize = 5;
 
         // Act
-        var (items, totalCount) = await _sut.GetPagedListAsync(null, null, page, pageSize);
+        var (items, totalCount) = await _sut.GetPagedListAsync(null, null, null, page, pageSize);
 
         // Assert：回傳筆數不超過 pageSize（可能不足 pageSize 但不應超過）
         items.Count().Should().BeLessOrEqualTo(pageSize,

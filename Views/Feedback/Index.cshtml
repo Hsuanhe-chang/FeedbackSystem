@@ -6,6 +6,7 @@
     // 從 ViewBag 取得分頁與篩選狀態
     byte? currentStatus   = ViewBag.CurrentStatus;
     byte? currentPriority = ViewBag.CurrentPriority;
+    string? currentKeyword = ViewBag.CurrentKeyword;  // 關鍵字搜尋（模糊比對姓名、主旨、追蹤代碼）
     int   currentPage     = ViewBag.CurrentPage;
     int   totalPages      = ViewBag.TotalPages;
     int   totalCount      = ViewBag.TotalCount;
@@ -61,8 +62,15 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" asp-controller="Feedback" asp-action="Index" class="row g-3 align-items-end">
+            @* 關鍵字搜尋輸入框：模糊比對客戶姓名、意見主旨、追蹤代碼 *@
+            <div class="col-md-4">
+                <label class="form-label">關鍵字搜尋</label>
+                <input type="text" name="keyword" class="form-control"
+                       placeholder="姓名、主旨、追蹤代碼…"
+                       value="@currentKeyword" />
+            </div>
             @* Status 篩選下拉 *@
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">處理狀態</label>
                 <select name="status" class="form-select">
                     <option value="">全部狀態</option>
@@ -82,7 +90,7 @@
                 </select>
             </div>
             @* Priority 篩選下拉 *@
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">優先等級</label>
                 <select name="priority" class="form-select">
                     <option value="">全部等級</option>
@@ -102,10 +110,10 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">篩選</button>
+                <button type="submit" class="btn btn-primary w-100">搜尋</button>
             </div>
             <div class="col-md-2">
-                @* 清除篩選條件 *@
+                @* 清除所有篩選條件（包含關鍵字）*@
                 <a asp-controller="Feedback" asp-action="Index" class="btn btn-outline-secondary w-100">清除</a>
             </div>
         </form>
@@ -198,7 +206,8 @@
                    asp-controller="Feedback" asp-action="Index"
                    asp-route-page="@(currentPage - 1)"
                    asp-route-status="@currentStatus"
-                   asp-route-priority="@currentPriority">上一頁</a>
+                   asp-route-priority="@currentPriority"
+                   asp-route-keyword="@currentKeyword">上一頁</a>
             </li>
 
             @* 依總頁數產生頁碼按鈕 *@
@@ -212,7 +221,8 @@
                            asp-controller="Feedback" asp-action="Index"
                            asp-route-page="@p"
                            asp-route-status="@currentStatus"
-                           asp-route-priority="@currentPriority">@p</a>
+                           asp-route-priority="@currentPriority"
+                           asp-route-keyword="@currentKeyword">@p</a>
                     </li>
                 }
                 else if (p == currentPage - 3 || p == currentPage + 3)
@@ -228,7 +238,8 @@
                    asp-controller="Feedback" asp-action="Index"
                    asp-route-page="@(currentPage + 1)"
                    asp-route-status="@currentStatus"
-                   asp-route-priority="@currentPriority">下一頁</a>
+                   asp-route-priority="@currentPriority"
+                   asp-route-keyword="@currentKeyword">下一頁</a>
             </li>
         </ul>
     </nav>
